@@ -1,2 +1,3 @@
-# actions
-Reusable workflows and actions for GitHub Actions
+# Boat Project Workflows
+
+Reusable workflows for GitHub Actions
