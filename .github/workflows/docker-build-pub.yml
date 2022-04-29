@@ -1,0 +1,69 @@
+name: Build and Publish Docker Image
+
+on:
+  workflow_call:
+
+    inputs:
+      ref:
+        default: ${{ github.ref }}
+        type: string
+        required: false
+      registry:
+        description: Docker container registry to publish built container to.
+        type: string
+        required: false
+        default: docker.io
+      image:
+        description: Docker image to publish
+        type: string
+        required: true
+    secrets:
+      username:
+        description: container registry username
+        required: true
+      password:
+        description: container registry password
+        required: true
+      token:
+        description: >
+          A github access token that has access to all sub-repositories.
+          The standard GITHUB_TOKEN does not have these privileges if any 
+          repo is needed besides the calling repository.
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
+          submodules: recursive
+          token: ${{ secrets.token }}
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ secrets.username }}
+          password: ${{ secrets.password }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ inputs.image }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and push image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ inputs.image }}
+          cache-to: type=inline
